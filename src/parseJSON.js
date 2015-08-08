@@ -3,27 +3,87 @@
 
 // but you're not, so you'll write it from scratch:
 var parseJSON = function(json) {
-	// your code goes here
-	var str = (json+'').trim();
-	var first = str[0];
-	var last = str[str.length - 1];
+  // your code goes here
 
-	switch (true) {
-		case (first === '[' && last === ']'):
-		case (first === '{' && last === '}'):
-		case (first === '"' && last === '"'):
-			return str.slice(1, str.length - 1);
-		case (!isNaN(+str)):
-			return +str;
-		case (str === 'true'):
-			return true;
-		case (str === 'false'):
-			return false;
-		case (str === 'null'):
-			return null;
-		default:
-			throw new SyntaxError();
-	}
+  var parseEscape = function(str) {
+    //test for illegal characters
+    for (var i = 0; i < str.length; i++) {
+      if (['\n','\r','\t','\b','\f'].indexOf(str[i]) !== -1) {
+        throw new SyntaxError;
+      }
+    }
+    
+    var segments = str.split('\\');
+    var afterEsc = false;
+    var firstChar;
+    _.each(segments, function(segment, index) {
+      if (afterEsc) {
+        if (segment.slice(1).indexOf('"') !== -1) {throw new SyntaxError;}
+        switch (segment[0]) {
+          case undefined: firstChar = '\\'; afterEsc = false; break;
+          case 'n': firstChar = '\n'; break;
+          case 'r': firstChar = '\r'; break;
+          case 't': firstChar = '\t'; break;
+          case 'b': firstChar = '\b'; break;
+          case 'f': firstChar = '\f'; break;
+          case '\'': firstChar = '\''; break;
+          case '\"': firstChar = '\"'; break;
+          default: throw new SyntaxError;
+        }
+        segments[index] = firstChar + segment.slice(1);
+      } else {
+        if (segment.indexOf('"') !== -1) {throw new SyntaxError;}
+        afterEsc = true;
+      }
+    })
+    return segments.join('');
+  }
+
+  var str = (json+'').trim();
+  var first = str[0];
+  var last = str[str.length - 1];
+  var inner = str.slice(1, str.length - 1);
+
+  switch (true) {
+    case (str.length === 0):
+      throw new SyntaxError();
+    case (first === '[' && last === ']'):
+      var result = [];
+      if (inner.split(' ').join('').length) {
+        _.each(inner.split(','), function(val) {
+          result.push(parseJSON(val));
+        });
+      }
+      return result;
+    case (first === '{' && last === '}'):
+      var result = {};
+      if (inner.split(' ').join('').length) {
+        _.each(inner.split(','), function(val) {
+          var pair = val.split(':');
+          if (pair.length !== 2 ||
+            pair[0][0] !== '"' ||
+            pair[0][pair.length - 1] !== '"') {
+
+            throw new SyntaxError();
+          }
+          result[pair[0].slice(1, pair.length - 1)] = parseJSON(pair[1]);
+        });
+      }
+      return result;
+    case (first === '"' && last === '"'):
+      return inner; //Need to figure out
+      // a way to deal with backslashes properly
+    case (!isNaN(+str)):
+      return +str;
+    case (str === 'true'):
+      return true;
+    case (str === 'false'):
+      return false;
+    case (str === 'null'):
+      return null;
+    default:
+      throw new SyntaxError();
+  }
 };
 
 
