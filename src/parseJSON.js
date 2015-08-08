@@ -5,15 +5,16 @@
 var parseJSON = function(json) {
   // your code goes here
 
-  var parseEscape = function(str) {
+  // helper function used to allow backslash-escaping in strings
+  var parseEscape = function(string) {
     //test for illegal characters
-    for (var i = 0; i < str.length; i++) {
-      if (['\n','\r','\t','\b','\f'].indexOf(str[i]) !== -1) {
+    for (var i = 0; i < string.length; i++) {
+      if (['\n','\r','\t','\b','\f'].indexOf(string[i]) !== -1) {
         throw new SyntaxError;
       }
     }
     
-    var segments = str.split('\\');
+    var segments = string.split('\\');
     var afterEsc = false;
     var firstChar;
     _.each(segments, function(segment, index) {
@@ -38,6 +39,7 @@ var parseJSON = function(json) {
     })
     return segments.join('');
   }
+
 
   var str = (json+'').trim();
   var first = str[0];
@@ -73,7 +75,8 @@ var parseJSON = function(json) {
     case (first === '"' && last === '"'):
       return inner; //Need to figure out
       // a way to deal with backslashes properly
-    case (!isNaN(+str)):
+    case (!isNaN(+str) && Math.abs(+str) !== Infinity):
+    // JSON.parse does not allow Infinity or -Infinity
       return +str;
     case (str === 'true'):
       return true;
