@@ -42,7 +42,7 @@ var parseJSON = function(json) {
 
   // helper function to split array/object by comma, but with
   // consideration for nested arrays/objects/strings
-  var splitObj = function(inner) {
+  var splitObj = function(inner, delim) {
     var splits = [];
     var charsAdded = 0;
     var openType;
@@ -55,7 +55,7 @@ var parseJSON = function(json) {
           queue.unshift(openType);
         }
       } else {
-        if (inner[j] === ',' && queue.length === 0) {
+        if (inner[j] === delim && queue.length === 0) {
           splits.push(inner.slice(charsAdded, j));
           charsAdded = j + 1;
         } else if (queue.length > 0 && [']', '}', '"'][queue[0]] === inner[j]
@@ -81,7 +81,7 @@ var parseJSON = function(json) {
     case (first === '[' && last === ']'):
       var result = [];
       if (inner.trim().length) {
-        _.each(splitObj(inner), function(val) {
+        _.each(splitObj(inner,','), function(val) {
           result.push(parseJSON(val));
         });
       }
@@ -89,8 +89,8 @@ var parseJSON = function(json) {
     case (first === '{' && last === '}'):
       var result = {};
       if (inner.trim().length) {
-        _.each(splitObj(inner), function(val) {
-          var pair = val.split(':');
+        _.each(splitObj(inner,','), function(val) {
+          var pair = splitObj(val,':');
           pair[0] = pair[0].trim();
           if (pair.length !== 2 ||
             pair[0][0] !== '"' ||
