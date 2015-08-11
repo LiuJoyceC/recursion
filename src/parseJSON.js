@@ -40,6 +40,35 @@ var parseJSON = function(json) {
     return segments.join('');
   }
 
+  // helper function to split array/object by comma, but with
+  // consideration for nested arrays/objects/strings
+  var splitObj = function(inner) {
+    var splits = [];
+    var charsAdded = 0;
+    var openType;
+    var queue = [];
+
+    for (var j = 0; j < inner.length; j++) {
+      openType = ['[', '{', '"'].indexOf(inner[j]);
+      if (openType !== -1 && (openType !== 2 || queue[0] !== 2)) {
+        if (openType !== 2 || inner[j-1] !== '\\') {
+          queue.unshift(openType);
+        }
+      } else {
+        if (inner[j] === ',' && queue.length === 0) {
+          splits.push(inner.slice(charsAdded, j));
+          charsAdded = j + 1;
+        } else if (queue.length > 0 && [']', '}', '"'][queue[0]] === inner[j]
+          && inner[j-1] !== '\\') {
+          queue.shift();
+        }
+      }
+    } 
+    if (queue.length > 0) {throw new SyntaxError;}
+    splits.push(inner.slice(charsAdded));
+    return splits;
+  }
+
 
   var str = (json+'').trim();
   var first = str[0];
@@ -51,30 +80,30 @@ var parseJSON = function(json) {
       throw new SyntaxError();
     case (first === '[' && last === ']'):
       var result = [];
-      if (inner.split(' ').join('').length) {
-        _.each(inner.split(','), function(val) {
+      if (inner.trim().length) {
+        _.each(splitObj(inner), function(val) {
           result.push(parseJSON(val));
         });
       }
       return result;
     case (first === '{' && last === '}'):
       var result = {};
-      if (inner.split(' ').join('').length) {
-        _.each(inner.split(','), function(val) {
+      if (inner.trim().length) {
+        _.each(splitObj(inner), function(val) {
           var pair = val.split(':');
+          pair[0] = pair[0].trim();
           if (pair.length !== 2 ||
             pair[0][0] !== '"' ||
-            pair[0][pair.length - 1] !== '"') {
+            pair[0][pair[0].length - 1] !== '"') {
 
             throw new SyntaxError();
           }
-          result[pair[0].slice(1, pair.length - 1)] = parseJSON(pair[1]);
+          result[pair[0].slice(1, pair[0].length - 1)] = parseJSON(pair[1]);
         });
       }
       return result;
     case (first === '"' && last === '"'):
-      return inner; //Need to figure out
-      // a way to deal with backslashes properly
+      return parseEscape(inner);
     case (!isNaN(+str) && Math.abs(+str) !== Infinity):
     // JSON.parse does not allow Infinity or -Infinity
       return +str;
